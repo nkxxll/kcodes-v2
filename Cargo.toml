@@ -1,0 +1,7 @@
+[package]
+name = "kcodes-v2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+insta = "1.40.0"
