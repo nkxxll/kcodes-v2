@@ -1,45 +1,45 @@
+use std::ascii::AsciiExt;
+use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Lines};
+use std::fs::read_to_string;
+use std::io::Result;
 use std::path::Path;
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     let path = "input.txt";
 
-    if let Ok(lines) = read_lines(path) {
+    if let Ok(input) = read_lines(path) {
         // Print the keycodes in a C array format.
-        let keycodes = lines_to_keycodes(lines);
+        let keycodes = lines_to_keycodes(input);
         println!("const uint16_t keycodes[] = {{ {} }};", keycodes.join(", "));
     }
 
     Ok(())
 }
 
-fn lines_to_keycodes(lines: Lines<BufReader<File>>) -> Vec<String> {
+fn lines_to_keycodes(input: String) -> Vec<String> {
     let mut keycodes: Vec<String> = Vec::new();
     let keymap = get_keymap();
-    for line in lines {
-        for key in line.expect("error reading line").split_whitespace() {
-            let keycode = match keymap.get(key) {
-                Some(code) => code.to_string(),
-                None => {
-                    eprintln!("Unknown key: {}", key);
-                    continue;
-                }
-            };
-            keycodes.push(keycode);
-        }
+    for key in input.split_whitespace() {
+        let upper: &str = &key.to_ascii_uppercase();
+        let keycode = match keymap.get(upper) {
+            Some(code) => code.to_string(),
+            None => {
+                eprintln!("Unknown key: {}", key);
+                continue;
+            }
+        };
+        keycodes.push(keycode);
     }
     keycodes
 }
 
 // Function to read lines from a file
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+fn read_lines<P>(filename: P) -> Result<String>
 where
     P: AsRef<Path>,
 {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
+    read_to_string(filename)
 }
 
 // Function to map keys and modifiers to QMK keycodes
@@ -119,4 +119,37 @@ fn get_keymap() -> HashMap<&'static str, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use insta::assert_snapshot;
+
+    fn vec_to_string(vec: Vec<String>) -> String {
+        vec.iter().fold("vec: ".to_string(), |a, b| a + b + "; ")
+    }
+
+    #[test]
+    fn kcodes_test1() {
+        let input: String = "a b c".to_string();
+        let keycodes: Vec<String> = lines_to_keycodes(input);
+        assert_snapshot!("snap_test_1", vec_to_string(keycodes))
+    }
+
+    #[test]
+    fn kcodes_test2() {
+        let input: String = "a\nb\nc".to_string();
+        let keycodes: Vec<String> = lines_to_keycodes(input);
+        assert_snapshot!("snap_test_2", vec_to_string(keycodes))
+    }
+
+    #[test]
+    fn kcodes_test3() {
+        let input: String = "a\n\tb\n\t\tc".to_string();
+        let keycodes: Vec<String> = lines_to_keycodes(input);
+        assert_snapshot!("snap_test_3", vec_to_string(keycodes))
+    }
+
+    #[test]
+    fn kcodes_test4() {
+        let input: String = "SHIFT a b c GUI NO".to_string();
+        let keycodes: Vec<String> = lines_to_keycodes(input);
+        assert_snapshot!("snap_test_4", vec_to_string(keycodes))
+    }
 }

@@ -1,0 +1,5 @@
+---
+source: src/main.rs
+expression: vec_to_string(keycodes)
+---
+vec: KC_A; KC_B; KC_C;
